@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
-use anchor_spl::token::{self, Token, Transfer,TokenAccount};
+// use anchor_lang::system_program;
+use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
 declare_id!("8JP6GACTPuFPoQzr3Y6Yx9aKtwTUkdZPzAmLjd19vSrS");
 
@@ -27,12 +28,15 @@ pub mod nonce_savings {
         Ok(())
     }
 
-    pub fn deposit_sol(ctx:Context<DepositSol>,amount:u64,lock_duration:u64)->Result<()>{
+    pub fn deposit_sol(ctx: Context<DepositSol>, amount: u64, lock_duration: u64) -> Result<()> {
         let savings_account = &mut ctx.accounts.savings_account;
 
-        let user= &mut ctx.accounts.user;
+        let user = &mut ctx.accounts.user;
 
-        require!(lock_duration >= 1 && lock_duration <=365,NonceError::FundsStillLocked);
+        require!(
+            lock_duration >= 1 && lock_duration <= 365,
+            NonceError::FundsStillLocked
+        );
         let cpi_context = CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
             anchor_lang::system_program::Transfer {
@@ -44,29 +48,84 @@ pub mod nonce_savings {
         Ok(())
     }
 
-    pub fn deposit_usdc(ctx:Context<DepositUSDC>,lock_duration:u64,amount:u64)->Result<()>{
+    pub fn deposit_usdc(ctx: Context<DepositUSDC>, lock_duration: u64, amount: u64) -> Result<()> {
         let user = &ctx.accounts.user;
         let savings_account = &mut ctx.accounts.savings_account;
-        require!(lock_duration > 1 && lock_duration <= 365 , NonceError::FundsStillLocked);
+        require!(
+            lock_duration > 1 && lock_duration <= 365,
+            NonceError::FundsStillLocked
+        );
 
-        let cpi_accounts = Transfer{
-            from:ctx.accounts.user_token_account.to_account_info(),
-            to:ctx.accounts.program_token_account.to_account_info(),
-            authority:user.to_account_info()
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.user_token_account.to_account_info(),
+            to: ctx.accounts.program_token_account.to_account_info(),
+            authority: user.to_account_info(),
         };
         let cpi_program = ctx.accounts.token_program.to_account_info();
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
 
-        token::transfer(cpi_ctx,amount);
+        token::transfer(cpi_ctx, amount);
 
         savings_account.usdc_balance += amount;
 
         let current_time = Clock::get()?.unix_timestamp;
-        savings_account.unlock_time = current_time + (lock_duration as i64 * 24 * 60 * 60 );
-        savings_account.lock_duration =lock_duration;
+        savings_account.unlock_time = current_time + (lock_duration as i64 * 24 * 60 * 60);
+        savings_account.lock_duration = lock_duration;
 
         Ok(())
-    } 
+    }
+
+    pub fn withdraw_sol(ctx: Context<WithdrawSol>, amount: u64) -> Result<()> {
+        let savings_account = &mut ctx.accounts.savings_account;
+        let user = &ctx.accounts.user;
+
+        let current_time = Clock::get()?.unix_timestamp;
+
+        require!(
+            current_time >= savings_account.unlock_time,
+            NonceError::FundsStillLocked
+        );
+
+        require!(
+            current_time >= savings_account.unlock_time,
+            NonceError::FundsStillLocked
+        );
+
+        require!(
+            savings_account.sol_balance >= amount,
+            NonceError::InsufficientFunds
+        );
+
+        let bumps = ctx.bumps.savings_account;
+
+        let binding = user.key();
+        let seeds = &[
+            b"sol_savings",
+            binding.as_ref(),
+            savings_account.name.as_bytes(),
+            &[bumps],
+        ];
+
+        let signer = &[&seeds[..]];
+
+        let cpi_context = CpiContext::new_with_signer(
+            ctx.accounts.system_program.to_account_info(),
+            anchor_lang::system_program::Transfer {
+                from: savings_account.to_account_info(),
+                to: user.to_account_info(),
+            },
+            // Transfer{
+            //     from:savings_account.to_account_info(),
+            //     to:user.to_account_info(),
+            // },
+            signer,
+        );
+        anchor_lang::system_program::transfer(cpi_context, amount);
+        // Update savings account SOL balance
+        savings_account.sol_balance -= amount;
+
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -120,8 +179,7 @@ pub struct DepositUSDC<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(name: String)]
-pub struct WthdrawSol<'info> {
+pub struct WithdrawSol<'info> {
     #[account(
         mut,
         seeds = [b"sol_savings", user.key().as_ref(), savings_account.name.as_bytes()],
