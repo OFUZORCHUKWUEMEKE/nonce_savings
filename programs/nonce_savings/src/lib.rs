@@ -12,7 +12,7 @@ pub mod nonce_savings {
     pub fn initialize_savings(
         ctx: Context<InitializeSavings>,
         name: String,
-        _lock_duration: i64,
+        lock_duration: i64,
         _amount: u64,
     ) -> Result<()> {
         require!(name.len() <= 50, NonceError::NameTooLong);
@@ -22,8 +22,11 @@ pub mod nonce_savings {
         savings_account.user = ctx.accounts.user.key();
         savings_account.sol_balance = 0;
         savings_account.usdc_balance = 0;
-        savings_account.unlock_time = 0;
-        savings_account.lock_duration = 0;
+
+        let clock = Clock::get()?;
+        savings_account.lock_duration = lock_duration as u64;
+        savings_account.unlock_time = clock.unix_timestamp + lock_duration;
+       
         Ok(())
     }
 
@@ -171,9 +174,9 @@ pub struct DepositUSDC<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
     #[account(mut)]
-    pub user_token_account: Account<'info, TokenAccount>,
+    pub user_token_account: Account<'info, anchor_spl::token::TokenAccount>,
     #[account(mut)]
-    pub program_token_account: Account<'info, TokenAccount>,
+    pub program_token_account: Account<'info, anchor_spl::token::TokenAccount>,
     pub token_program: Program<'info, Token>,
 }
 
