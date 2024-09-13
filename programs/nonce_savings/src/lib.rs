@@ -1,30 +1,72 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::system_instruction;
-use anchor_spl::token::{self, Token, TokenAccount, Transfer};
+use anchor_lang::system_program;
+use anchor_spl::token::{self, Token, Transfer,TokenAccount};
 
 declare_id!("8JP6GACTPuFPoQzr3Y6Yx9aKtwTUkdZPzAmLjd19vSrS");
 
 #[program]
 pub mod nonce_savings {
+
     use super::*;
 
     pub fn initialize_savings(
         ctx: Context<InitializeSavings>,
         name: String,
-        lock_duration: i64,
-        amount: u64,
+        _lock_duration: i64,
+        _amount: u64,
     ) -> Result<()> {
         require!(name.len() <= 50, NonceError::NameTooLong);
 
         let savings_account = &mut ctx.accounts.savings_account;
         savings_account.name = name;
-        savings_account.owner = ctx.accounts.user.key();
+        savings_account.user = ctx.accounts.user.key();
         savings_account.sol_balance = 0;
         savings_account.usdc_balance = 0;
         savings_account.unlock_time = 0;
         savings_account.lock_duration = 0;
         Ok(())
     }
+
+    pub fn deposit_sol(ctx:Context<DepositSol>,amount:u64,lock_duration:u64)->Result<()>{
+        let savings_account = &mut ctx.accounts.savings_account;
+
+        let user= &mut ctx.accounts.user;
+
+        require!(lock_duration >= 1 && lock_duration <=365,NonceError::FundsStillLocked);
+        let cpi_context = CpiContext::new(
+            ctx.accounts.system_program.to_account_info(),
+            anchor_lang::system_program::Transfer {
+                from: user.to_account_info(),
+                to: savings_account.to_account_info(),
+            },
+        );
+        anchor_lang::system_program::transfer(cpi_context, amount)?;
+        Ok(())
+    }
+
+    pub fn deposit_usdc(ctx:Context<DepositUSDC>,lock_duration:u64,amount:u64)->Result<()>{
+        let user = &ctx.accounts.user;
+        let savings_account = &mut ctx.accounts.savings_account;
+        require!(lock_duration > 1 && lock_duration <= 365 , NonceError::FundsStillLocked);
+
+        let cpi_accounts = Transfer{
+            from:ctx.accounts.user_token_account.to_account_info(),
+            to:ctx.accounts.program_token_account.to_account_info(),
+            authority:user.to_account_info()
+        };
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+
+        token::transfer(cpi_ctx,amount);
+
+        savings_account.usdc_balance += amount;
+
+        let current_time = Clock::get()?.unix_timestamp;
+        savings_account.unlock_time = current_time + (lock_duration as i64 * 24 * 60 * 60 );
+        savings_account.lock_duration =lock_duration;
+
+        Ok(())
+    } 
 }
 
 #[derive(Accounts)]
@@ -50,7 +92,7 @@ pub struct DepositSol<'info> {
         mut,
         seeds=[b"sol_savings",user.key().as_ref(),name.as_bytes()],
         bump,
-        has_one= owner @ NonceError::Unauthorized,
+        has_one= user @ NonceError::Unauthorized,
     )]
     pub savings_account: Account<'info, SavingsAccount>,
     #[account(mut)]
@@ -65,7 +107,7 @@ pub struct DepositUSDC<'info> {
         mut,
         seeds = [b"usdc_savings",user.key().as_ref(),name.as_bytes()],
         bump,
-        has_one = owner @ NonceError::Unauthorized
+        has_one = user @ NonceError::Unauthorized
     )]
     pub savings_account: Account<'info, SavingsAccount>,
     #[account(mut)]
@@ -84,7 +126,7 @@ pub struct WthdrawSol<'info> {
         mut,
         seeds = [b"sol_savings", user.key().as_ref(), savings_account.name.as_bytes()],
         bump,
-        has_one = owner @ NonceError::Unauthorized
+        has_one = user @ NonceError::Unauthorized
     )]
     pub savings_account: Account<'info, SavingsAccount>,
     #[account(mut)]
@@ -97,7 +139,7 @@ pub struct WthdrawSol<'info> {
 pub struct SavingsAccount {
     #[max_len(32)]
     pub name: String,
-    pub owner: Pubkey,
+    pub user: Pubkey,
     pub sol_balance: u64,
     pub usdc_balance: u64,
     pub unlock_time: i64,
