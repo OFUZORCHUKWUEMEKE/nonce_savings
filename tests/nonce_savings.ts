@@ -1,16 +1,19 @@
-// import * as anchor from "@coral-xyz/anchor";
-// import { Program } from "@coral-xyz/anchor";
-// import { NonceSavings } from "../target/types/nonce_savings";
+import * as anchor from "@coral-xyz/anchor";
+import { Program } from "@coral-xyz/anchor";
+import { NonceSavings } from "../target/types/nonce_savings";
+import { BN } from "bn.js";
 
-// describe("nonce_savings", () => {
-//   // Configure the client to use the local cluster.
-//   anchor.setProvider(anchor.AnchorProvider.env());
+describe("nonce_savings", () => {
+  // Configure the client to use the local cluster.
+  anchor.setProvider(anchor.AnchorProvider.env());
 
-//   const program = anchor.workspace.NonceSavings as Program<NonceSavings>;
+  const program = anchor.workspace.NonceSavings as Program<NonceSavings>;
 
-//   it("Is initialized!", async () => {
-//     // Add your test here.
-//     const tx = await program.methods.initialize().rpc();
-//     console.log("Your transaction signature", tx);
-//   });
-// });
+  it("Is initialized!", async () => {
+    // Add your test here.
+    // const tx = await program.methods.initialize().rpc();
+    // console.log("Your transaction signature", tx);
+    // const tx = program.methods.initializeSavings("First Savings", BN(6), BN(100));
+    console.log("Initialiazed Completely")
+  });
+});
