@@ -129,6 +129,36 @@ pub mod nonce_savings {
 
         Ok(())
     }
+
+    pub fn withdraw_usdc(ctx:Context<WithdrawUSDC>,amount:u64)->Result<()>{
+        let savings_account = &mut ctx.accounts.savings_account;
+        let current_time = Clock::get()?.unix_timestamp;
+
+        require!(current_time >= savings_account.unlock_time, NonceError::FundsStillLocked);
+
+        require!(savings_account.usdc_balance >=amount , NonceError::InsufficientFunds);
+
+        let seeds = &[
+            b"program_usdc_account".as_ref(),
+            &[ctx.bumps.program_token_account]
+        ];
+        let signer = &[&seeds[..]];
+
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.program_token_account.to_account_info(),
+            to: ctx.accounts.user_token_account.to_account_info(),
+            authority: ctx.accounts.program_token_account.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        token::transfer(cpi_ctx, amount)?;
+
+        // Update savings account balance
+        savings_account.usdc_balance -= amount;
+
+        msg!("Withdrawn {} USDC from savings account '{}'", amount, savings_account.name);
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -227,7 +257,8 @@ pub struct WithdrawUSDC<'info> {
     #[account(
         mut,
         seeds=[b"usdc_savings"],
-        bump
+        bump,
+        has_one = user @ NonceError::Unauthorized
     )]
     pub savings_account: Account<'info, SavingsAccount>,
     #[account(mut)]
