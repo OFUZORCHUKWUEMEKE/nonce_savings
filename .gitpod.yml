@@ -8,9 +8,8 @@ tasks:
     init: |
       cargo build && npm install && export PATH="/home/gitpod/.local/share/solana/install/active_release/bin:$PATH"
     command: | 
-       cargo watch -x run &&  if ! [ -x "$(command -v solana)" ]; then
-        sh -c "$(curl -sSfL https://release.solana.com/v1.10.32/install)"
-        export PATH="/home/gitpod/.local/share/solana/install/active_release/bin:$PATH"
+       cargo watch -x run && sh -c "$(curl -sSfL https://release.solana.com/v1.10.32/install)" &&  export PATH="/home/gitpod/.local/share/solana/install/active_release/bin:$PATH"
+       
       
 
 

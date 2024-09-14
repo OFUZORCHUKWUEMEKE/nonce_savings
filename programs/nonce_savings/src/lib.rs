@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 // use anchor_lang::system_program;
-use anchor_spl::token::{self, Token, TokenAccount, Transfer};
+use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
 declare_id!("8JP6GACTPuFPoQzr3Y6Yx9aKtwTUkdZPzAmLjd19vSrS");
 
@@ -26,7 +26,12 @@ pub mod nonce_savings {
         let clock = Clock::get()?;
         savings_account.lock_duration = lock_duration as u64;
         savings_account.unlock_time = clock.unix_timestamp + lock_duration;
-       
+
+        Ok(())
+    }
+
+    pub fn Initialize_program_account(ctx: Context<InitializeProgramAccount>) -> Result<()> {
+        msg!("Program token account initialized");
         Ok(())
     }
 
@@ -116,10 +121,6 @@ pub mod nonce_savings {
                 from: savings_account.to_account_info(),
                 to: user.to_account_info(),
             },
-            // Transfer{
-            //     from:savings_account.to_account_info(),
-            //     to:user.to_account_info(),
-            // },
             signer,
         );
         anchor_lang::system_program::transfer(cpi_context, amount);
@@ -144,6 +145,27 @@ pub struct InitializeSavings<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct InitializeProgramAccount<'info> {
+    #[account(mut)]
+    pub initialiazer: Signer<'info>,
+    #[account(
+        init,
+        payer=initialiazer,
+        seeds=[b"program_usdc_account"],
+        bump,
+        token::mint = mint,
+        token::authority = program_authority
+    )]
+    pub program_account_account: Account<'info, TokenAccount>,
+    #[account(seeds =[b"program_authority"],bump)]
+    pub program_authority: UncheckedAccount<'info>,
+    pub mint: Account<'info, Mint>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
@@ -175,9 +197,15 @@ pub struct DepositUSDC<'info> {
     pub user: Signer<'info>,
     #[account(mut)]
     pub user_token_account: Account<'info, anchor_spl::token::TokenAccount>,
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds=[b"program_usdc_account"],
+        bump,
+    )]
     pub program_token_account: Account<'info, anchor_spl::token::TokenAccount>,
     pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
