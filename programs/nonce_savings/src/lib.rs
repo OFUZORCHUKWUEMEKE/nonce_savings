@@ -30,7 +30,7 @@ pub mod nonce_savings {
         Ok(())
     }
 
-    pub fn Initialize_program_account(ctx: Context<InitializeProgramAccount>) -> Result<()> {
+    pub fn initialize_program_account(_ctx: Context<InitializeProgramAccount>) -> Result<()> {
         msg!("Program token account initialized");
         Ok(())
     }
@@ -196,7 +196,7 @@ pub struct DepositUSDC<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
     #[account(mut)]
-    pub user_token_account: Account<'info, anchor_spl::token::TokenAccount>,
+    pub user_token_account: Account<'info, TokenAccount>,
     #[account(
         mut,
         seeds=[b"program_usdc_account"],
@@ -219,6 +219,28 @@ pub struct WithdrawSol<'info> {
     pub savings_account: Account<'info, SavingsAccount>,
     #[account(mut)]
     pub user: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct WithdrawUSDC<'info> {
+    #[account(
+        mut,
+        seeds=[b"usdc_savings"],
+        bump
+    )]
+    pub savings_account: Account<'info, SavingsAccount>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    #[account(mut)]
+    pub user_token_account: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        seeds=[b"program_usdc_account"],
+        bump
+    )]
+    pub program_token_account: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
 
