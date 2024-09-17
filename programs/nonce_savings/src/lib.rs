@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 // use anchor_lang::system_program;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
+
 declare_id!("8JP6GACTPuFPoQzr3Y6Yx9aKtwTUkdZPzAmLjd19vSrS");
 
 #[program]
@@ -31,10 +32,10 @@ pub mod nonce_savings {
         Ok(())
     }
 
-    // pub fn initialize_program_account(_ctx: Context<InitializeProgramAccount>) -> Result<()> {
-    //     msg!("Program token account initialized");
-    //     Ok(())
-    // }
+    pub fn initialize_program_account(_ctx: Context<InitializeProgramAccount>) -> Result<()> {
+        msg!("Program token account initialized");
+        Ok(())
+    }
 
     pub fn deposit_sol(ctx: Context<DepositSol>, amount: u64, lock_duration: u64) -> Result<()> {
         let savings_account = &mut ctx.accounts.savings_account;
@@ -56,32 +57,31 @@ pub mod nonce_savings {
         Ok(())
     }
 
-    // pub fn deposit_usdc(ctx: Context<DepositUSDC>, lock_duration: u64, amount: u64) -> Result<()> {
-    //     let user = &ctx.accounts.user;
-    //     let savings_account = &mut ctx.accounts.savings_account;
-    //     require!(
-    //         lock_duration > 1 && lock_duration <= 365,
-    //         NonceError::FundsStillLocked
-    //     );
-    // declare_id!("11111111111111111111111111111111");
-    //     let cpi_accounts = Transfer {
-    //         from: ctx.accounts.user_token_account.to_account_info(),
-    //         to: ctx.accounts.program_token_account.to_account_info(),
-    //         authority: user.to_account_info(),
-    //     };
-    //     let cpi_program = ctx.accounts.token_program.to_account_info();
-    //     let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+    pub fn deposit_usdc(ctx: Context<DepositUSDC>, lock_duration: u64, amount: u64) -> Result<()> {
+        let user = &ctx.accounts.user;
+        let savings_account = &mut ctx.accounts.savings_account;
+        require!(
+            lock_duration > 1 && lock_duration <= 365,
+            NonceError::FundsStillLocked
+        );
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.user_token_account.to_account_info(),
+            to: ctx.accounts.program_token_account.to_account_info(),
+            authority: user.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
 
-    //     token::transfer(cpi_ctx, amount);
+        token::transfer(cpi_ctx, amount);
 
-    //     savings_account.usdc_balance += amount;
+        savings_account.usdc_balance += amount;
 
-    //     let current_time = Clock::get()?.unix_timestamp;
-    //     savings_account.unlock_time = current_time + (lock_duration as i64 * 24 * 60 * 60);
-    //     savings_account.lock_duration = lock_duration;
+        let current_time = Clock::get()?.unix_timestamp;
+        savings_account.unlock_time = current_time + (lock_duration as i64 * 24 * 60 * 60);
+        savings_account.lock_duration = lock_duration;
 
-    //     Ok(())
-    // }
+        Ok(())
+    }
 
     pub fn withdraw_sol(ctx: Context<WithdrawSol>, amount: u64) -> Result<()> {
         let savings_account = &mut ctx.accounts.savings_account;
@@ -131,37 +131,37 @@ pub mod nonce_savings {
         Ok(())
     }
 
-    // pub fn withdraw_usdc(ctx:Context<WithdrawUSDC>,amount:u64)->Result<()>{
-    //     let savings_account = &mut ctx.accounts.savings_account;
-    //     let current_time = Clock::get()?.unix_timestamp;
+    pub fn withdraw_usdc(ctx:Context<WithdrawUSDC>,amount:u64)->Result<()>{
+        let savings_account = &mut ctx.accounts.savings_account;
+        let current_time = Clock::get()?.unix_timestamp;
 
-    //     require!(current_time >= savings_account.unlock_time, NonceError::FundsStillLocked);
+        require!(current_time >= savings_account.unlock_time, NonceError::FundsStillLocked);
 
-    //     require!(savings_account.usdc_balance >=amount , NonceError::InsufficientFunds);
+        require!(savings_account.usdc_balance >=amount , NonceError::InsufficientFunds);
 
-    //     let seeds = &[
-    //         b"program_usdc_account".as_ref(),
-    //         &[ctx.bumps.program_token_account]
-    //     ];
-    //     let signer = &[&seeds[..]];
+        let seeds = &[
+            b"program_usdc_account".as_ref(),
+            &[ctx.bumps.program_token_account]
+        ];
+        let signer = &[&seeds[..]];
 
-    //     let cpi_accounts = Transfer {
-    //         from: ctx.accounts.program_token_account.to_account_info(),
-    //         to: ctx.accounts.user_token_account.to_account_info(),
-    //         authority: ctx.accounts.program_token_account.to_account_info(),
-    //     };
-    //     let cpi_program = ctx.accounts.token_program.to_account_info();
-    //     let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
-    //     token::transfer(cpi_ctx, amount)?;
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.program_token_account.to_account_info(),
+            to: ctx.accounts.user_token_account.to_account_info(),
+            authority: ctx.accounts.program_token_account.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        token::transfer(cpi_ctx, amount)?;
 
-    //     // Update savings account balance
-    //     savings_account.usdc_balance -= amount;
+        // Update savings account balance
+        savings_account.usdc_balance -= amount;
 
-    //     msg!("Withdrawn {} USDC from savings account '{}'", amount, savings_account.name);
-    //     Ok(())
+        msg!("Withdrawn {} USDC from savings account '{}'", amount, savings_account.name);
+        Ok(())
 
 
-    // }
+    }
 }
 
 #[derive(Accounts)]
@@ -180,26 +180,26 @@ pub struct InitializeSavings<'info> {
     pub system_program: Program<'info, System>,
 }
 
-// #[derive(Accounts)]
-// pub struct InitializeProgramAccount<'info> {
-//     #[account(mut)]
-//     pub initialiazer: Signer<'info>,
-//     #[account(
-//         init,
-//         payer=initialiazer,
-//         seeds=[b"program_usdc_account"],
-//         bump,
-//         token::mint = mint,
-//         token::authority = program_authority
-//     )]
-//     pub program_account_account: Account<'info, TokenAccount>,
-//     #[account(seeds =[b"program_authority"],bump)]
-//     pub program_authority: UncheckedAccount<'info>,
-//     pub mint: Account<'info, Mint>,
-//     pub token_program: Program<'info, Token>,
-//     pub system_program: Program<'info, System>,
-//     pub rent: Sysvar<'info, Rent>,
-// }
+#[derive(Accounts)]
+pub struct InitializeProgramAccount<'info> {
+    #[account(mut)]
+    pub initialiazer: Signer<'info>,
+    #[account(
+        init,
+        payer=initialiazer,
+        seeds=[b"program_usdc_account"],
+        bump,
+        token::mint = mint,
+        token::authority = program_authority
+    )]
+    pub program_account_account: Account<'info, TokenAccount>,
+    #[account(seeds =[b"program_authority"],bump)]
+    pub program_authority: UncheckedAccount<'info>,
+    pub mint: Account<'info, Mint>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
+}
 
 #[derive(Accounts)]
 #[instruction(name: String)]
@@ -216,30 +216,30 @@ pub struct DepositSol<'info> {
     pub system_program: Program<'info, System>,
 }
 
-// #[derive(Accounts)]
-// #[instruction(name: String)]
-// pub struct DepositUSDC<'info> {
-//     #[account(
-//         mut,
-//         seeds = [b"usdc_savings",user.key().as_ref(),name.as_bytes()],
-//         bump,
-//         has_one = user @ NonceError::Unauthorized
-//     )]
-//     pub savings_account: Account<'info, SavingsAccount>,
-//     #[account(mut)]
-//     pub user: Signer<'info>,
-//     #[account(mut)]
-//     pub user_token_account: Account<'info, TokenAccount>,
-//     #[account(
-//         mut,
-//         seeds=[b"program_usdc_account"],
-//         bump,
-//     )]
-//     pub program_token_account: Account<'info, anchor_spl::token::TokenAccount>,
-//     pub token_program: Program<'info, Token>,
-//     pub system_program: Program<'info, System>,
-//     pub rent: Sysvar<'info, Rent>,
-// }
+#[derive(Accounts)]
+#[instruction(name: String)]
+pub struct DepositUSDC<'info> {
+    #[account(
+        mut,
+        seeds = [b"usdc_savings",user.key().as_ref(),name.as_bytes()],
+        bump,
+        has_one = user @ NonceError::Unauthorized
+    )]
+    pub savings_account: Account<'info, SavingsAccount>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    #[account(mut)]
+    pub user_token_account: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        seeds=[b"program_usdc_account"],
+        bump,
+    )]
+    pub program_token_account: Account<'info, anchor_spl::token::TokenAccount>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
+}
 
 #[derive(Accounts)]
 pub struct WithdrawSol<'info> {
@@ -255,28 +255,28 @@ pub struct WithdrawSol<'info> {
     pub system_program: Program<'info, System>,
 }
 
-// #[derive(Accounts)]
-// pub struct WithdrawUSDC<'info> {
-//     #[account(
-//         mut,
-//         seeds=[b"usdc_savings"],
-//         bump,
-//         has_one = user @ NonceError::Unauthorized
-//     )]
-//     pub savings_account: Account<'info, SavingsAccount>,
-//     #[account(mut)]
-//     pub user: Signer<'info>,
-//     #[account(mut)]
-//     pub user_token_account: Account<'info, TokenAccount>,
-//     #[account(
-//         mut,
-//         seeds=[b"program_usdc_account"],
-//         bump
-//     )]
-//     pub program_token_account: Account<'info, TokenAccount>,
-//     pub token_program: Program<'info, Token>,
-//     pub system_program: Program<'info, System>,
-// }
+#[derive(Accounts)]
+pub struct WithdrawUSDC<'info> {
+    #[account(
+        mut,
+        seeds=[b"usdc_savings"],
+        bump,
+        has_one = user @ NonceError::Unauthorized
+    )]
+    pub savings_account: Account<'info, SavingsAccount>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    #[account(mut)]
+    pub user_token_account: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        seeds=[b"program_usdc_account"],
+        bump
+    )]
+    pub program_token_account: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+}
 
 #[account]
 #[derive(InitSpace)]
