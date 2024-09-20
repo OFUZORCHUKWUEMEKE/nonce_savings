@@ -4,7 +4,7 @@
 
 # Learn more from ready-to-use templates: https://www.gitpod.io/docs/introduction/getting-started/quickstart
 tasks:
-  - name: Build and Install
+  - name: Build and Install   
     init: |
       cargo build && npm install && export PATH="/home/gitpod/.local/share/solana/install/active_release/bin:$PATH"
     command: | 
