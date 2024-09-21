@@ -1,3 +1,4 @@
+pub mod errors;
 use anchor_lang::prelude::*;
 // use anchor_lang::system_program;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
