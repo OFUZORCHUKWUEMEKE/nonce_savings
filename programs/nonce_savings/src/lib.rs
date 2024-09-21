@@ -2,7 +2,7 @@ pub mod errors;
 use anchor_lang::prelude::*;
 // use anchor_lang::system_program;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
-
+use errors::NonceError;
 
 declare_id!("8JP6GACTPuFPoQzr3Y6Yx9aKtwTUkdZPzAmLjd19vSrS");
 
@@ -297,18 +297,18 @@ pub enum SavingsStatus {
     Unlocked,
 }
 
-#[error_code]
-pub enum NonceError {
-    #[msg("Savings account is inactive")]
-    SavingsInactive,
-    #[msg("Funds are still locked")]
-    FundsStillLocked,
-    #[msg("Unauthorized access to savings account")]
-    Unauthorized,
-    #[msg("Name Of Savings to Long")]
-    NameTooLong,
-    #[msg("Insufficient Funds")]
-    InsufficientFunds,
-}
+// #[error_code]
+// pub enum NonceError {
+//     #[msg("Savings account is inactive")]
+//     SavingsInactive,
+//     #[msg("Funds are still locked")]
+//     FundsStillLocked,
+//     #[msg("Unauthorized access to savings account")]
+//     Unauthorized,
+//     #[msg("Name Of Savings to Long")]
+//     NameTooLong,
+//     #[msg("Insufficient Funds")]
+//     InsufficientFunds,
+// }
 
 const DESCRIMAINATOR: usize = 8;
