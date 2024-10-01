@@ -6,7 +6,7 @@ use anchor_spl::{
 };
 use crate::{
     constants::DESCRIMINATOR,
-    error::NonceError,
+    errors::NonceError,
     state::{CounterAccount, SavingsAccount, SavingsState, SavingsType},
 };
 #[derive(Accounts)]
@@ -83,7 +83,7 @@ impl<'info> WithDrawSol<'info> {
         };
         let signers_seeds: [&[&[u8]]; 1] = [&[
             b"savings".as_ref(),
-            self.user.to_account_info().key().as_ref(),
+            &self.user.to_account_info().key().as_ref(),
             &self.counter_account.savings_count.to_le_bytes(),
             &[self.savings_account.bump],
         ]];

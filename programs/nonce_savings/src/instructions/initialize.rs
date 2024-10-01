@@ -16,7 +16,7 @@ pub struct InitializeSolSavings<'info> {
     #[account(
         mut,
         seeds=[b"counter", user.key().as_ref()],
-        bump
+        bump=counter_account.bump
     )]
     pub counter_account: Account<'info, CounterAccount>,
     #[account(
@@ -43,7 +43,7 @@ pub struct InitializeUSDCSavings<'info> {
     #[account(
         init,
         seeds=[b"savings",user.key().as_ref(),&counter_account.savings.to_le_bytes()],
-        bump,
+        bump,_
         payer = user,
         space= DESCRIMINATOR + SavingsAccount::INIT_SPACE
     )]
@@ -93,7 +93,6 @@ impl<'info> InitializeSolSavings<'info> {
             current_time: Clock::get()?.unix_timestamp,
             bump: self.bumps.get("savings_account").unwrap(),
             usd_price: usd_price,
-            max_len: 32,
             lock_duration: duration,
         });
         self.counter_account.counter += 1;
@@ -119,7 +118,6 @@ impl<'info> InitializeUSDCSavings<'info> {
             type_of_savings: type_Of_savings,
             current_time: Clock::get()?.unix_timestamp,
             bump: self.bumps.get("savings_account").unwrap(),
-            max_len: 32,
             lock_duration: duration,
             usd_price: usd_price,
         });

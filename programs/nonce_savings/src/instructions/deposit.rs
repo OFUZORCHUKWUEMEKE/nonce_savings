@@ -20,7 +20,7 @@ pub struct DepositSol<'info> {
     pub counter_account: Account<'info, CounterAccount>,
     #[account(
         mut,
-        seeds=[b"savings",user.key(),&counter_account.fundraiser_count.to_le_bytes()],
+        seeds=[b"savings",user.key().as_ref(),&counter_account.savings_count.to_le_bytes()],
         bump= savings_account.bump
     )]
     pub savings_account: Account<'info, SavingsAccount>,
@@ -38,7 +38,7 @@ pub struct DepositUSDC<'info> {
     )]
     pub counter_account: Account<'info, CounterAccount>,
     #[account(mut
-    ,seeds=[b"savings",&counter_account.fundraiser_count.to_le_bytes(),user.key()],
+    ,seeds=[b"savings",&counter_account.counter.to_le_bytes(),user.key()],
     bump= savings_account.bump
     )]
     pub savings_account: Account<'info, SavingsAccount>,
@@ -75,7 +75,7 @@ impl<'info> DepositSol<'info> {
 
         anchor_lang::system_program::transfer(cpi_context, amount)?;
 
-        self.counter_account.counter += 1;
+        self.counter_account.savings_count += 1;
         self.savings_account.sol_balance += amount;
 
         msg!(
@@ -85,6 +85,7 @@ impl<'info> DepositSol<'info> {
             self.savings_account.to_account_info()
         );
         Ok(());
+        
     }
 }
 
