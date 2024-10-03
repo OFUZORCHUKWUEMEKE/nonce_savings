@@ -37,8 +37,9 @@ pub struct DepositUSDC<'info> {
         bump=counter_account.bump
     )]
     pub counter_account: Account<'info, CounterAccount>,
-    #[account(mut
-    ,seeds=[b"savings",&counter_account.counter.to_le_bytes(),user.key()],
+    #[account(
+    mut,
+    seeds=[b"savings",&counter_account.counter.to_le_bytes(),user.key()],
     bump= savings_account.bump
     )]
     pub savings_account: Account<'info, SavingsAccount>,
