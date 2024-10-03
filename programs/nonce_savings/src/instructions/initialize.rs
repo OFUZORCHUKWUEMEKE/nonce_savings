@@ -1,11 +1,11 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    associated_token::AssociatedToken,
-    token::{Mint, Token, TokenAccount},
+    associated_token::AssociatedToken, token::Token, token_interface::{Mint,TokenAccount, TokenInterface}
 };
 use crate::{
     constants::DESCRIMINATOR,
     state::{CounterAccount, SavingsAccount, SavingsState, SavingsType},
+    errors::NonceError
 };
 
 #[derive(Accounts)]
@@ -42,7 +42,7 @@ pub struct InitializeUSDCSavings<'info> {
     pub counter_account: Account<'info, CounterAccount>,
     #[account(
         init,
-        seeds=[b"savings",user.key().as_ref(),&counter_account.savings.to_le_bytes()],
+        seeds=[b"savings",user.key().as_ref(),&counter_account.savings_count.to_le_bytes()],
         bump,
         payer = user,
         space= DESCRIMINATOR + SavingsAccount::INIT_SPACE
@@ -71,7 +71,7 @@ pub struct InitializeUSDCSavings<'info> {
     )]
     pub vault_account: InterfaceAccount<'info, TokenAccount>,
     pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token>,
+    pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
@@ -83,6 +83,7 @@ impl<'info> InitializeSolSavings<'info> {
         duration: i64,
         type_Of_savings: SavingsType,
         usd_price: Option<f64>,
+        bump:u8
     ) -> Result<()> {
         self.savings_account.set_inner(SavingsAccount {
             name: name,
@@ -91,12 +92,11 @@ impl<'info> InitializeSolSavings<'info> {
             usdc_balance: 0,
             type_of_savings: type_Of_savings,
             current_time: Clock::get()?.unix_timestamp,
-            bump: self.bumps.get("savings_account").unwrap(),
+            bump:bump,
             usd_price: usd_price,
-            max_len: 32,
             lock_duration: duration,
         });
-        self.counter_account.counter += 1;
+        self.counter_account.savings_count += 1;
         msg!("Initialized Savings Account");
         Ok(())
     }
@@ -110,6 +110,7 @@ impl<'info> InitializeUSDCSavings<'info> {
         duration: i64,
         type_Of_savings: SavingsType,
         usd_price: Option<f64>,
+        bump:u8
     ) -> Result<()> {
         self.savings_account.set_inner(SavingsAccount {
             name: name,
@@ -118,12 +119,11 @@ impl<'info> InitializeUSDCSavings<'info> {
             usdc_balance: 0,
             type_of_savings: type_Of_savings,
             current_time: Clock::get()?.unix_timestamp,
-            bump: self.bumps.get("savings_account").unwrap(),
-            max_len: 32,
+            bump,
             lock_duration: duration,
             usd_price: usd_price,
         });
-        self.counter_account.counter += 1;
+        self.counter_account.savings_count += 1;
         msg!("Initialized Savings Account");
         Ok(())
     }

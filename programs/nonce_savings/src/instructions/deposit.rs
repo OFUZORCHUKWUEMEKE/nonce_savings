@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    associated_token::AssociatedToken,
-    token::{Mint, Token, TokenAccount},
+    associated_token::AssociatedToken, token::{self, Token}, token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked}
 };
 use crate::{
     constants::DESCRIMINATOR,
@@ -20,7 +19,7 @@ pub struct DepositSol<'info> {
     pub counter_account: Account<'info, CounterAccount>,
     #[account(
         mut,
-        seeds=[b"savings",user.key(),&counter_account.fundraiser_count.to_le_bytes()],
+        seeds=[b"savings",user.key().as_ref(),&counter_account.savings_count.to_le_bytes()],
         bump= savings_account.bump
     )]
     pub savings_account: Account<'info, SavingsAccount>,
@@ -38,7 +37,7 @@ pub struct DepositUSDC<'info> {
     )]
     pub counter_account: Account<'info, CounterAccount>,
     #[account(mut
-    ,seeds=[b"savings",&counter_account.fundraiser_count.to_le_bytes(),user.key()],
+    ,seeds=[b"savings",&counter_account.savings_count.to_le_bytes(),user.key().as_ref()],
     bump= savings_account.bump
     )]
     pub savings_account: Account<'info, SavingsAccount>,
@@ -59,12 +58,12 @@ pub struct DepositUSDC<'info> {
     )]
     pub vault_account: InterfaceAccount<'info, TokenAccount>,
     pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token>,
+    pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
 impl<'info> DepositSol<'info> {
-    pub fn deposit_sol(&self, amount: u64) -> Result<()> {
+    pub fn deposit_sol(&mut self, amount: u64) -> Result<()> {
         let cpi_context = CpiContext::new(
             self.system_program.to_account_info(),
             anchor_lang::system_program::Transfer {
@@ -75,31 +74,31 @@ impl<'info> DepositSol<'info> {
 
         anchor_lang::system_program::transfer(cpi_context, amount)?;
 
-        self.counter_account.counter += 1;
+        self.counter_account.savings_count += 1;
         self.savings_account.sol_balance += amount;
 
-        msg!(
-            "Transferred {} lamports from {} to {}",
-            amount,
-            self.user.to_account_info(),
-            self.savings_account.to_account_info()
-        );
-        Ok(());
+      
+        Ok(())
     }
 }
 
 impl<'info> DepositUSDC<'info> {
-    pub fn deposit_usdc(&self, amount: u64) -> Result<()> {
-        let cpi_context = CpiContext::new(
-            self.token_program.to_account_info(),
-            anchor_spl::token::Transfer {
+    pub fn deposit_usdc(&mut self, amount: u64) -> Result<()> {
+   
+
+        let cpi_accounts = TransferChecked {
                 from: self.user_ata.to_account_info(),
                 to: self.vault_account.to_account_info(),
                 authority: self.user.to_account_info(),
-            },
+                mint:self.usdc_mint.to_account_info()
+        };
+
+        let cpi_ctx = CpiContext::new(
+            self.token_program.to_account_info(),
+            cpi_accounts,
         );
 
-        token::transfer(cpi_context, amount);
+        anchor_spl::token_interface::transfer_checked(cpi_ctx, amount,6)?;
 
         self.savings_account.usdc_balance += amount;
 

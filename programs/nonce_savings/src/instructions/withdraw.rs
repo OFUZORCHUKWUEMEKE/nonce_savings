@@ -1,12 +1,11 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    associated_token::AssociatedToken,
-    token::{Mint, Token, TokenAccount},
-    token_interface::TokenInterface,
+    associated_token::AssociatedToken, token::{ Token}, token_interface::{self, Mint, TokenAccount, TokenInterface, Transfer,transfer_checked,TransferChecked}
+   
 };
 use crate::{
     constants::DESCRIMINATOR,
-    error::NonceError,
+    errors::NonceError,
     state::{CounterAccount, SavingsAccount, SavingsState, SavingsType},
 };
 #[derive(Accounts)]
@@ -21,7 +20,7 @@ pub struct WithDrawSol<'info> {
     counter_account: Account<'info, CounterAccount>,
     #[account(
         mut,
-        seeds=[b"savings",user.key(),&counter_account.savings_count.to_le_bytes()],
+        seeds=[b"savings",user.key().as_ref(),&counter_account.savings_count.to_le_bytes()],
         bump=savings_account.bump
     )]
     pub savings_account: Account<'info, SavingsAccount>,
@@ -40,7 +39,7 @@ pub struct WithdrawUSDC<'info> {
     counter_account: Account<'info, CounterAccount>,
     #[account(
         mut,
-        seeds=[b"savings",user.key(),&counter_account.savings_count.to_le_bytes()],
+        seeds=[b"savings",user.key().as_ref(),&counter_account.savings_count.to_le_bytes()],
         bump = savings_account.bump
     )]
     pub savings_account: Account<'info, SavingsAccount>,
@@ -49,7 +48,7 @@ pub struct WithdrawUSDC<'info> {
         address = usdc_mint.key(),
         mint::token_program = token_program,
     )]
-    pub usdc_mint: Account<'info, Mint>,
+    pub usdc_mint: InterfaceAccount<'info, Mint>,
     #[account(
         mut,
         associated_token::mint=usdc_mint,
@@ -66,7 +65,7 @@ pub struct WithdrawUSDC<'info> {
     )]
     pub vault_account: InterfaceAccount<'info, TokenAccount>,
     pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token>,
+    pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
@@ -81,9 +80,10 @@ impl<'info> WithDrawSol<'info> {
             from: self.savings_account.to_account_info(),
             to: self.user.to_account_info(),
         };
+        let binding = self.user.to_account_info().key();
         let signers_seeds: [&[&[u8]]; 1] = [&[
             b"savings".as_ref(),
-            self.user.to_account_info().key().as_ref(),
+            binding.as_ref(),
             &self.counter_account.savings_count.to_le_bytes(),
             &[self.savings_account.bump],
         ]];
@@ -99,10 +99,10 @@ impl<'info> WithDrawSol<'info> {
 }
 
 impl<'info> WithdrawUSDC<'info> {
-    pub fn withraw(&self) -> Result<()> {
+    pub fn withdraw(&mut self) -> Result<()> {
         let balance = self.savings_account.usdc_balance;
         if balance == 0 {
-            return NonceError::InsufficientFunds;
+            return Err(NonceError::InsufficientFunds.into());
         }
         // Get the current timestamp
         let current_timestamp = Clock::get()?.unix_timestamp;
@@ -112,26 +112,28 @@ impl<'info> WithdrawUSDC<'info> {
             < self.savings_account.current_time
                 + (self.savings_account.lock_duration as i64) * 86400
         {
-            return NonceError::FundsStillLocked;
+            return Err(NonceError::FundsStillLocked.into());
         }
 
-        let cpi_accounts = anchor_spl::token::Transfer {
+        let cpi_accounts = TransferChecked {
             from: self.vault_account.to_account_info(),
             to: self.user_ata.to_account_info(),
             authority: self.savings_account.to_account_info(),
+            mint:self.usdc_mint.to_account_info()
         };
+        let binding = self.user.key();
         let signer_seeds: &[&[&[u8]]] = &[&[
             b"savings",
-            self.user.key().as_ref(),
+            &binding.as_ref(),
             &self.counter_account.savings_count.to_le_bytes(),
             &[self.savings_account.bump],
         ]];
-        let cpi_ctx = CpiContext::new_with_signer(
+        let ctx = CpiContext::new_with_signer(
             self.token_program.to_account_info(),
             cpi_accounts,
             signer_seeds,
         );
-        token::transfer(cpi_ctx, balance)?;
+       transfer_checked(ctx,balance,self.usdc_mint.decimals);
 
         // Set the USDC balance in the savings account to zero after withdrawal
         self.savings_account.usdc_balance = 0;
