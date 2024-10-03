@@ -85,7 +85,7 @@ impl<'info> DepositSol<'info> {
             self.user.to_account_info(),
             self.savings_account.to_account_info()
         );
-        Ok(());
+        Ok(())
         
     }
 }
