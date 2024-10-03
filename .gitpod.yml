@@ -10,6 +10,6 @@ tasks:
     command: | 
        cargo watch -x run && sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)" && export PATH="/home/gitpod/.local/share/solana/install/active_release/bin:$PATH"
        
-      
+    
 
 
