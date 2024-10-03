@@ -45,7 +45,7 @@ pub struct WithdrawUSDC<'info> {
     pub savings_account: Account<'info, SavingsAccount>,
     // Mint of token
     #[account(
-        address = usdc_mint.key(),
+        // address = usdc_mint.key(),
         mint::token_program = token_program,
     )]
     pub usdc_mint: InterfaceAccount<'info, Mint>,

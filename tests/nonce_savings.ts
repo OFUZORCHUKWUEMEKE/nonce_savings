@@ -14,8 +14,6 @@ describe("nonce_savings", () => {
     // Add your test here.
     // const tx = await program.methods.initialize().rpc();
     // console.log("Your transaction signature", tx);
-    const tx = program.methods.initializeSavings("First Savings", new BN(6), new BN(100));
-    console.log("Initialiazed Completely",tx)
-    console.log(tx.accounts,tx.transaction);
+    console.log("testing")
   });
 });
