@@ -76,7 +76,6 @@ impl<'info> DepositSol<'info> {
 
         self.counter_account.savings_count += 1;
         self.savings_account.sol_balance += amount;
-
       
         Ok(())
     }
