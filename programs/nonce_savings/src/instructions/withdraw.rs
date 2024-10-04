@@ -53,8 +53,7 @@ pub struct WithdrawUSDC<'info> {
         mut,
         associated_token::mint=usdc_mint,
         associated_token::token_program=token_program,
-        associated_token::authority=user
-        
+        associated_token::authority=user   
     )]
     pub user_ata: InterfaceAccount<'info, TokenAccount>,
     #[account(

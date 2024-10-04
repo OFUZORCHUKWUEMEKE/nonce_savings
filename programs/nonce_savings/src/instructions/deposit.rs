@@ -13,7 +13,7 @@ pub struct DepositSol<'info> {
     pub user: Signer<'info>,
     #[account(
         mut,
-       seeds=[b"counter", user.key().as_ref()],
+        seeds=[b"counter", user.key().as_ref()],
         bump=counter_account.bump
     )]
     pub counter_account: Account<'info, CounterAccount>,
