@@ -15,7 +15,7 @@ pub struct WithDrawSol<'info> {
     #[account(
         mut,
         seeds=[b"counter",user.key().as_ref()],
-        bump=counter_account.bump
+        bump
     )]
     counter_account: Account<'info, CounterAccount>,
     #[account(
@@ -34,7 +34,7 @@ pub struct WithdrawUSDC<'info> {
     #[account(
         mut,
         seeds=[b"counter",user.key().as_ref()],
-        bump = counter_account.bump
+        bump 
     )]
     counter_account: Account<'info, CounterAccount>,
     #[account(

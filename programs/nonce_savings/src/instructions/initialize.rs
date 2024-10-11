@@ -9,20 +9,14 @@ use crate::{
 };
 
 #[derive(Accounts)]
+#[instruction(random_seed: String, name: String)] 
 pub struct InitializeSolSavings<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
-    // Creates Counter for the number of savings the user has
-    #[account(
-        mut,
-        seeds=[b"counter", user.key().as_ref()],
-        bump
-    )]
-    pub counter_account: Account<'info, CounterAccount>,
     #[account(
         init,
         payer=user,
-        seeds=[b"savings",user.key().as_ref(),&counter_account.savings_count.to_le_bytes()],
+        seeds=[b"savings",user.key().as_ref(),random_seed.as_ref()],
         bump,
         space= DESCRIMINATOR + SavingsAccount::INIT_SPACE
     )]
@@ -31,18 +25,21 @@ pub struct InitializeSolSavings<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(random_seed: String, name: String)] 
 pub struct InitializeUSDCSavings<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
-    #[account(
-        mut,
-        seeds=[b"counter", user.key().as_ref()],
-        bump=counter_account.bump
-    )]
-    pub counter_account: Account<'info, CounterAccount>,
+    // #[account(
+    //     init_if_needed,
+    //     payer=user,
+    //     seeds=[b"counter", user.key().as_ref()],
+    //     bump,
+    //     space = DESCRIMINATOR + CounterAccount::INIT_SPACE
+    // )]
+    // pub counter_account: Account<'info, CounterAccount>,
     #[account(
         init,
-        seeds=[b"savings",user.key().as_ref(),&counter_account.savings_count.to_le_bytes()],
+        seeds=[b"savings",user.key().as_ref(),random_seed.as_ref()],
         bump,
         payer = user,
         space= DESCRIMINATOR + SavingsAccount::INIT_SPACE
@@ -78,25 +75,26 @@ pub struct InitializeUSDCSavings<'info> {
 impl<'info> InitializeSolSavings<'info> {
     pub fn initialize(
         &mut self,
+        random_seed:String,
         name: String,
-        amount: u64,
+        
         duration: i64,
         type_Of_savings: SavingsType,
         usd_price: Option<f64>,
-        bump:u8
+        bump:&InitializeSolSavingsBumps
     ) -> Result<()> {
         self.savings_account.set_inner(SavingsAccount {
+            random_seed,
             name: name,
             user: self.user.key(),
             sol_balance: 0,
             usdc_balance: 0,
             type_of_savings: type_Of_savings,
             current_time: Clock::get()?.unix_timestamp,
-            bump:bump,
+            bump:bump.savings_account,
             usd_price: usd_price,
             lock_duration: duration,
         });
-        self.counter_account.savings_count += 1;
         msg!("Initialized Savings Account");
         Ok(())
     }
@@ -105,25 +103,26 @@ impl<'info> InitializeSolSavings<'info> {
 impl<'info> InitializeUSDCSavings<'info> {
     pub fn initializeusdcsavings(
         &mut self,
-        amount: u64,
+        random_seed:String,
         name: String,
         duration: i64,
         type_Of_savings: SavingsType,
         usd_price: Option<f64>,
-        bump:u8
+        bump:&InitializeUSDCSavingsBumps
     ) -> Result<()> {
         self.savings_account.set_inner(SavingsAccount {
+            random_seed,
             name: name,
+        
             user: self.user.key(),
             sol_balance: 0,
             usdc_balance: 0,
             type_of_savings: type_Of_savings,
             current_time: Clock::get()?.unix_timestamp,
-            bump,
+            bump:bump.savings_account,
             lock_duration: duration,
             usd_price: usd_price,
         });
-        self.counter_account.savings_count += 1;
         msg!("Initialized Savings Account");
         Ok(())
     }

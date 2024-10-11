@@ -13,13 +13,14 @@ pub struct SavingsAccount {
     pub usd_price: Option<f64>,       // Optional field to store USD price
     pub bump: u8,                     // Bump seed for PDA (program-derived account)
     pub type_of_savings: SavingsType, // Type of savings (enum)
+    #[max_len(32)]
+    pub random_seed: String,
 }
 
 #[account]
+#[derive(InitSpace)]
 pub struct CounterAccount {
-    pub counter: Pubkey,
     pub savings_count: u64,
-    pub bump: u8,
 }
 
 #[derive(AnchorDeserialize, AnchorSerialize, PartialEq, Eq)]

@@ -13,14 +13,13 @@ pub struct DepositSol<'info> {
     pub user: Signer<'info>,
     #[account(
         mut,
-        seeds=[b"counter", user.key().as_ref()],
-        bump=counter_account.bump
-    )]
-    pub counter_account: Account<'info, CounterAccount>,
-    #[account(
-        mut,
-        seeds=[b"savings",user.key().as_ref(),&counter_account.savings_count.to_le_bytes()],
-        bump= savings_account.bump
+        seeds = [
+            b"savings",
+            user.key().as_ref(),
+            &savings_account.random_seed.as_ref()
+        ],
+        bump = savings_account.bump,
+        constraint = savings_account.user == user.key() // Verify ownership
     )]
     pub savings_account: Account<'info, SavingsAccount>,
     pub system_program: Program<'info, System>,
@@ -32,13 +31,13 @@ pub struct DepositUSDC<'info> {
     pub user: Signer<'info>,
     #[account(
         mut,
-       seeds=[b"counter", user.key().as_ref()],
-        bump=counter_account.bump
-    )]
-    pub counter_account: Account<'info, CounterAccount>,
-    #[account(mut
-    ,seeds=[b"savings",&counter_account.savings_count.to_le_bytes(),user.key().as_ref()],
-    bump= savings_account.bump
+        seeds = [
+            b"savings",
+            user.key().as_ref(),
+            &savings_account.random_seed.as_ref()
+        ],
+        bump = savings_account.bump,
+        constraint = savings_account.user == user.key() // Verify ownership
     )]
     pub savings_account: Account<'info, SavingsAccount>,
     pub usdc_mint: InterfaceAccount<'info, Mint>,
@@ -74,8 +73,9 @@ impl<'info> DepositSol<'info> {
 
         anchor_lang::system_program::transfer(cpi_context, amount)?;
 
-        self.counter_account.savings_count += 1;
+        // self.counter_account.savings_count += 1;
         self.savings_account.sol_balance += amount;
+        msg!("Saving deposited");
       
         Ok(())
     }
